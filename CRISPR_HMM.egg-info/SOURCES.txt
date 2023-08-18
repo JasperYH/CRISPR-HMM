@@ -1,0 +1,15 @@
+LICENSE
+pyproject.toml
+setup.py
+CRISPR_HMM.egg-info/PKG-INFO
+CRISPR_HMM.egg-info/SOURCES.txt
+CRISPR_HMM.egg-info/dependency_links.txt
+CRISPR_HMM.egg-info/not-zip-safe
+CRISPR_HMM.egg-info/requires.txt
+CRISPR_HMM.egg-info/top_level.txt
+crispr_hmm/__init__.py
+crispr_hmm/fast_viterbi.c
+crispr_hmm/hmm_alignment.py
+crispr_hmm/hmm_alignment_baum_welch.py
+crispr_hmm/util.py
+tests/test.py

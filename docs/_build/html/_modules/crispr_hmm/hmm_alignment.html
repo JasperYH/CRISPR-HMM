@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>crispr_hmm.hmm_alignment &mdash; CRISPR-HMM 0.0.3 documentation</title>
+      <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="../../" id="documentation_options" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/sphinx_highlight.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            CRISPR-HMM
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">crispr_hmm</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">CRISPR-HMM</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">crispr_hmm.hmm_alignment</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for crispr_hmm.hmm_alignment</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">log</span><span class="p">,</span> <span class="n">e</span>
+<span class="kn">import</span> <span class="nn">pathos.multiprocessing</span> <span class="k">as</span> <span class="nn">mp</span>
+
+
+
+<div class="viewcode-block" id="hmm_model"><a class="viewcode-back" href="../../crispr_hmm.html#crispr_hmm.hmm_alignment.hmm_model">[docs]</a><span class="k">class</span> <span class="nc">hmm_model</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    The class to perform sequence alignment with hidden Markov model.</span>
+<span class="sd">    </span>
+<span class="sd">    :param str reference_sequence: a reference sequence.</span>
+<span class="sd">    </span>
+<span class="sd">    :param delta: the transition probability from match state to deletion state.</span>
+<span class="sd">    :type delta: float, list</span>
+<span class="sd">      </span>
+<span class="sd">    :param float tau: the transition probability from match state to insertion state.</span>
+<span class="sd">    :type tau: float, list</span>
+<span class="sd">    </span>
+<span class="sd">    :param float epsilon: the transition probability from deletion state to deletion state.</span>
+<span class="sd">    :type epsilon: float, list</span>
+<span class="sd">      </span>
+<span class="sd">    :param float gamma: the transition probability from insertion state to insertion state.</span>
+<span class="sd">    :type epsilon: float, list</span>
+<span class="sd">        </span>
+<span class="sd">    :param float rho: the transition probability from deletion state to insertion state.</span>
+<span class="sd">      </span>
+<span class="sd">    :param float pi: the transition probability from insertion state to deletion state.</span>
+<span class="sd">    </span>
+<span class="sd">    :param float p: the emission probability of match. The emission probability of</span>
+<span class="sd">      mismatch is 1-p.</span>
+<span class="sd">      </span>
+<span class="sd">    :param float q: the emission probability of insertion and deletion. q should be smaller than p</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+            
+  
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reference_sequence</span><span class="p">,</span> <span class="n">delta</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">tau</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">epsilon</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> \
+                 <span class="n">gamma</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span> <span class="n">rho</span><span class="o">=</span><span class="mf">0.03</span><span class="p">,</span> <span class="n">pi</span><span class="o">=</span><span class="mf">0.03</span><span class="p">,</span> <span class="n">q</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">0.9</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reference_sequence</span> <span class="o">=</span> <span class="n">reference_sequence</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">reference_sequence</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">delta</span> <span class="o">=</span> <span class="n">delta</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">delta</span> <span class="o">=</span> <span class="p">[</span><span class="n">delta</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)]</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">tau</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">=</span> <span class="n">tau</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">=</span> <span class="p">[</span><span class="n">tau</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>           
+            
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">epsilon</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="n">epsilon</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">epsilon</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> 
+            
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">gamma</span><span class="p">)</span> <span class="o">==</span> <span class="nb">list</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="n">gamma</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">=</span> <span class="p">[</span><span class="n">gamma</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)]</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">rho</span> <span class="o">=</span> <span class="n">rho</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pi</span> <span class="o">=</span> <span class="n">pi</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="n">q</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">match</span> <span class="o">=</span> <span class="n">p</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mismatch</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">match</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_check_parameters</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span> <span class="o">=</span> <span class="mf">1e-100</span>
+    
+    
+    
+    
+<div class="viewcode-block" id="hmm_model.calculate_alignment_probability"><a class="viewcode-back" href="../../crispr_hmm.html#crispr_hmm.hmm_alignment.hmm_model.calculate_alignment_probability">[docs]</a>    <span class="k">def</span> <span class="nf">calculate_alignment_probability</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">aligned_ref</span><span class="p">,</span> <span class="n">aligned_seq</span><span class="p">,</span> <span class="n">use_log</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the probabity of a alignment.</span>
+<span class="sd">        </span>
+<span class="sd">        :param str aligned_ref: The reference sequence after alignment. e.g. A-T</span>
+<span class="sd">        </span>
+<span class="sd">        :param str aligned_seq: A mutated sequence after alignment. e.g. AC-</span>
+<span class="sd">        </span>
+<span class="sd">        :param boolean use_log: return log of probability.</span>
+<span class="sd">        </span>
+<span class="sd">        :return float: The probability of the alignment.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+      
+        <span class="n">prob</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">hidden_state</span> <span class="o">=</span> <span class="s2">&quot;S&quot;</span>
+        <span class="n">position</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">aligned_ref</span><span class="p">)):</span>
+            <span class="n">deltaC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="n">position</span><span class="p">]</span>
+            <span class="n">tauC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="n">position</span><span class="p">]</span>
+            <span class="n">epsilonC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">[</span><span class="n">position</span><span class="p">]</span>
+            <span class="n">gammaC</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="n">position</span><span class="p">]</span>
+            <span class="n">transition</span> <span class="o">=</span> <span class="p">{(</span><span class="s2">&quot;S&quot;</span><span class="p">,</span><span class="s2">&quot;M&quot;</span><span class="p">):(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="mi">0</span><span class="p">]),(</span><span class="s2">&quot;S&quot;</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">):</span><span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="mi">0</span><span class="p">],(</span><span class="s2">&quot;S&quot;</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">):</span><span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                          <span class="p">(</span><span class="s2">&quot;M&quot;</span><span class="p">,</span><span class="s2">&quot;M&quot;</span><span class="p">):(</span><span class="mi">1</span><span class="o">-</span><span class="n">tauC</span><span class="o">-</span><span class="n">deltaC</span><span class="p">),(</span><span class="s2">&quot;M&quot;</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">):</span><span class="n">deltaC</span><span class="p">,(</span><span class="s2">&quot;M&quot;</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">):</span><span class="n">tauC</span><span class="p">,</span>
+                          <span class="p">(</span><span class="s2">&quot;D&quot;</span><span class="p">,</span><span class="s2">&quot;M&quot;</span><span class="p">):(</span><span class="mi">1</span><span class="o">-</span><span class="n">epsilonC</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">rho</span><span class="p">),(</span><span class="s2">&quot;D&quot;</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">):</span><span class="n">epsilonC</span><span class="p">,(</span><span class="s2">&quot;D&quot;</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">):</span><span class="bp">self</span><span class="o">.</span><span class="n">rho</span><span class="p">,</span>
+                          <span class="p">(</span><span class="s2">&quot;I&quot;</span><span class="p">,</span><span class="s2">&quot;M&quot;</span><span class="p">):(</span><span class="mi">1</span><span class="o">-</span><span class="n">gammaC</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">pi</span><span class="p">),(</span><span class="s2">&quot;I&quot;</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">):</span><span class="n">gammaC</span><span class="p">,(</span><span class="s2">&quot;I&quot;</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">):</span><span class="bp">self</span><span class="o">.</span><span class="n">pi</span><span class="p">}</span>
+
+            <span class="k">if</span> <span class="n">aligned_ref</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;-&quot;</span> <span class="ow">and</span> <span class="n">aligned_seq</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;-&quot;</span> <span class="ow">and</span> <span class="n">aligned_ref</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="n">aligned_seq</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="n">prob</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">match</span> <span class="o">*</span> <span class="n">transition</span><span class="p">[(</span><span class="n">hidden_state</span><span class="p">,</span><span class="s2">&quot;M&quot;</span><span class="p">)]</span>
+                <span class="n">hidden_state</span> <span class="o">=</span> <span class="s2">&quot;M&quot;</span>
+                <span class="n">position</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">aligned_ref</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;-&quot;</span> <span class="ow">and</span> <span class="n">aligned_seq</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;-&quot;</span> <span class="ow">and</span> <span class="n">aligned_ref</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="n">aligned_seq</span><span class="p">[</span><span class="n">i</span><span class="p">]:</span>
+                <span class="n">prob</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mismatch</span> <span class="o">*</span> <span class="n">transition</span><span class="p">[(</span><span class="n">hidden_state</span><span class="p">,</span><span class="s2">&quot;M&quot;</span><span class="p">)]</span>
+                <span class="n">hidden_state</span> <span class="o">=</span> <span class="s2">&quot;M&quot;</span>
+                <span class="n">position</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">aligned_ref</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;-&quot;</span> <span class="ow">and</span> <span class="n">aligned_seq</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;-&quot;</span><span class="p">:</span>
+                <span class="n">prob</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">transition</span><span class="p">[(</span><span class="n">hidden_state</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">)]</span>
+                <span class="n">hidden_state</span> <span class="o">=</span> <span class="s2">&quot;D&quot;</span>
+                <span class="n">position</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">aligned_ref</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;-&quot;</span> <span class="ow">and</span> <span class="n">aligned_seq</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;-&quot;</span><span class="p">:</span>
+                <span class="n">prob</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">transition</span><span class="p">[(</span><span class="n">hidden_state</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">)]</span>
+                <span class="n">hidden_state</span> <span class="o">=</span> <span class="s2">&quot;I&quot;</span>
+
+        <span class="n">transition</span> <span class="o">=</span> <span class="p">{(</span><span class="s2">&quot;M&quot;</span><span class="p">,</span><span class="s2">&quot;E&quot;</span><span class="p">):(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="n">position</span><span class="p">]),(</span><span class="s2">&quot;I&quot;</span><span class="p">,</span><span class="s2">&quot;E&quot;</span><span class="p">):</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="n">position</span><span class="p">],(</span><span class="s2">&quot;D&quot;</span><span class="p">,</span><span class="s2">&quot;E&quot;</span><span class="p">):</span><span class="mi">1</span><span class="p">}</span>
+        <span class="n">prob</span> <span class="o">*=</span> <span class="n">transition</span><span class="p">[(</span><span class="n">hidden_state</span><span class="p">,</span><span class="s2">&quot;E&quot;</span><span class="p">)]</span>
+        <span class="k">if</span> <span class="n">use_log</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="n">prob</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">prob</span></div>
+    
+    
+    
+    
+<div class="viewcode-block" id="hmm_model.viterbi"><a class="viewcode-back" href="../../crispr_hmm.html#crispr_hmm.hmm_alignment.hmm_model.viterbi">[docs]</a>    <span class="k">def</span> <span class="nf">viterbi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform the Viterbi algorithm to generate the best alignment between the</span>
+<span class="sd">        reference sequence and a mutated sequence t.</span>
+<span class="sd">        </span>
+<span class="sd">        :param str t: A mutated sequence.</span>
+<span class="sd">        </span>
+<span class="sd">        :return: The alignment outcome: (reference sequence, mutated sequence, </span>
+<span class="sd">        alignment log(probability).)</span>
+<span class="sd">        :rtype: tuple</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+      
+        <span class="n">M</span><span class="p">,</span><span class="n">D</span><span class="p">,</span><span class="n">I</span><span class="p">,</span><span class="n">R</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">viterbi_matrices</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">aligned_ref</span><span class="p">,</span> <span class="n">aligned_t</span><span class="p">,</span> <span class="n">BEST_SCORE</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">backtrace</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">R</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">aligned_ref</span><span class="p">,</span> <span class="n">aligned_t</span><span class="p">,</span> <span class="n">BEST_SCORE</span></div>
+        
+        
+        
+        
+<div class="viewcode-block" id="hmm_model.viterbi_matrices"><a class="viewcode-back" href="../../crispr_hmm.html#crispr_hmm.hmm_alignment.hmm_model.viterbi_matrices">[docs]</a>    <span class="k">def</span> <span class="nf">viterbi_matrices</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the matrices with the Viterbi&#39;s dynamic programming algorithm.</span>
+<span class="sd">        </span>
+<span class="sd">        :param str t: A mutated sequence.</span>
+<span class="sd">        </span>
+<span class="sd">        :return: Four matrices computed by the Viterbi algorithm: (match, deletion,</span>
+<span class="sd">          insertion, back trace matrix).</span>
+<span class="sd">        :rtype: tuple</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+      
+      
+        <span class="n">MIN</span> <span class="o">=</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+        <span class="n">dim_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">dim_j</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">M</span> <span class="o">=</span> <span class="p">[[</span><span class="bp">self</span><span class="o">.</span><span class="n">_init_M</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim_j</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim_i</span><span class="p">)]</span>
+        <span class="n">D</span> <span class="o">=</span> <span class="p">[[</span><span class="bp">self</span><span class="o">.</span><span class="n">_init_D</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim_j</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim_i</span><span class="p">)]</span>
+        <span class="n">I</span> <span class="o">=</span> <span class="p">[[</span><span class="bp">self</span><span class="o">.</span><span class="n">_init_I</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim_j</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim_i</span><span class="p">)]</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="p">[[</span><span class="bp">self</span><span class="o">.</span><span class="n">_init_R</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim_j</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">dim_i</span><span class="p">)]</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim_i</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim_j</span><span class="p">):</span>
+                <span class="n">M_candidates</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> \
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span> <span class="o">+</span> <span class="n">D</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> \
+                                    <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">+</span> <span class="n">I</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+                <span class="n">D_candidates</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">],</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">D</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">],</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">+</span> <span class="n">I</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">]]</span>
+                <span class="n">I_candidates</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">+</span> <span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span> <span class="o">+</span> <span class="n">D</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">+</span> <span class="n">I</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+                
+                <span class="n">M</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">use_log</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">+</span> \
+                            <span class="nb">max</span><span class="p">(</span><span class="n">M_candidates</span><span class="p">)</span>
+                <span class="n">D</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span> <span class="o">+</span> <span class="nb">max</span><span class="p">(</span><span class="n">D_candidates</span><span class="p">)</span>
+                <span class="n">I</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span> <span class="o">+</span> <span class="nb">max</span><span class="p">(</span><span class="n">I_candidates</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="nb">max</span><span class="p">(</span><span class="n">M_candidates</span><span class="p">)</span> <span class="o">!=</span> <span class="n">MIN</span><span class="p">:</span>
+                    <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;M&quot;</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">][</span><span class="n">M_candidates</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">M_candidates</span><span class="p">))]</span>
+                <span class="k">if</span> <span class="nb">max</span><span class="p">(</span><span class="n">D_candidates</span><span class="p">)</span> <span class="o">!=</span> <span class="n">MIN</span><span class="p">:</span>   
+                    <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;M&quot;</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">][</span><span class="n">D_candidates</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">D_candidates</span><span class="p">))]</span>
+                <span class="k">if</span> <span class="nb">max</span><span class="p">(</span><span class="n">I_candidates</span><span class="p">)</span> <span class="o">!=</span> <span class="n">MIN</span><span class="p">:</span>   
+                    <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;M&quot;</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">][</span><span class="n">I_candidates</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">I_candidates</span><span class="p">))]</span>
+        <span class="k">return</span> <span class="n">M</span><span class="p">,</span><span class="n">D</span><span class="p">,</span><span class="n">I</span><span class="p">,</span><span class="n">R</span></div>
+    
+    
+    
+    
+<div class="viewcode-block" id="hmm_model.backtrace"><a class="viewcode-back" href="../../crispr_hmm.html#crispr_hmm.hmm_alignment.hmm_model.backtrace">[docs]</a>    <span class="k">def</span> <span class="nf">backtrace</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">D</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">R</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the best alignment by backtrace through the matrices computed by the</span>
+<span class="sd">        function viterbi_matrices(t).</span>
+<span class="sd">        </span>
+<span class="sd">        :param str t: A mutated sequence.</span>
+<span class="sd">        </span>
+<span class="sd">        :param M: the match matrix computed by viterbi_matrices.</span>
+<span class="sd">        </span>
+<span class="sd">        :param D: the deletion matrix computed by viterbi_matrices.</span>
+<span class="sd">        </span>
+<span class="sd">        :param I: the insertion matrix computed by viterbi_matrices.</span>
+<span class="sd">        </span>
+<span class="sd">        :param R: the back trace matrix computed by viterbi_matrices.</span>
+<span class="sd">        </span>
+<span class="sd">        :return: The alignment outcome: (reference sequence, mutated sequence, </span>
+<span class="sd">        alignment log(probability).)</span>
+<span class="sd">        :rtype: tuple</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+      
+      
+        <span class="n">R</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span>
+        <span class="n">R</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span>
+        <span class="n">R</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span>
+        <span class="n">R</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;0&quot;</span>
+        <span class="n">scores</span> <span class="o">=</span> <span class="p">[</span><span class="n">M</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">][</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)]</span> <span class="o">+</span> \
+                      <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">]),</span>\
+                  <span class="n">D</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">][</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)],</span>\
+                  <span class="n">I</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">][</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)]</span> <span class="o">+</span> \
+                      <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">])]</span>
+        <span class="n">BEST_SCORE</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;M&quot;</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">][</span><span class="n">scores</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">BEST_SCORE</span><span class="p">)]</span>
+
+        <span class="n">aligned_ref</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">aligned_t</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="k">while</span> <span class="p">(</span><span class="n">state</span> <span class="o">!=</span> <span class="s2">&quot;0&quot;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;M&quot;</span><span class="p">:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">aligned_ref</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reference_sequence</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">aligned_t</span> <span class="o">+=</span> <span class="n">t</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">i</span> <span class="o">-=</span> <span class="mi">1</span>
+                <span class="n">j</span> <span class="o">-=</span> <span class="mi">1</span>
+
+            <span class="k">elif</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;D&quot;</span><span class="p">:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">aligned_ref</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reference_sequence</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">aligned_t</span> <span class="o">+=</span> <span class="s2">&quot;-&quot;</span>
+                <span class="n">i</span> <span class="o">-=</span> <span class="mi">1</span>
+
+            <span class="k">elif</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;I&quot;</span><span class="p">:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="n">R</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">][</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">aligned_ref</span> <span class="o">+=</span> <span class="s2">&quot;-&quot;</span>
+                <span class="n">aligned_t</span> <span class="o">+=</span> <span class="n">t</span><span class="p">[</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">j</span> <span class="o">-=</span> <span class="mi">1</span>
+
+        <span class="n">aligned_ref</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">aligned_ref</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">aligned_ref</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)])</span>
+        <span class="n">aligned_t</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">aligned_t</span><span class="p">[</span><span class="n">j</span><span class="p">]</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">aligned_t</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="n">aligned_ref</span><span class="p">,</span> <span class="n">aligned_t</span><span class="p">,</span> <span class="n">BEST_SCORE</span></div>
+    
+    
+    
+    
+<div class="viewcode-block" id="hmm_model.Baum_Welch_estimator"><a class="viewcode-back" href="../../crispr_hmm.html#crispr_hmm.hmm_alignment.hmm_model.Baum_Welch_estimator">[docs]</a>    <span class="k">def</span> <span class="nf">Baum_Welch_estimator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">seqs</span><span class="p">,</span><span class="n">method</span><span class="o">=</span><span class="s2">&quot;Constrained_MLE&quot;</span><span class="p">,</span>\
+                             <span class="n">param_to_estimate</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">,</span><span class="s2">&quot;tau&quot;</span><span class="p">,</span><span class="s2">&quot;epsilon&quot;</span><span class="p">,</span><span class="s2">&quot;gamma&quot;</span><span class="p">],</span>\
+                             <span class="n">lower_bound</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span><span class="n">ncores</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span><span class="n">tol</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">,</span><span class="n">MAX_iter</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span><span class="n">echo</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Estimate parameters with the Baum-Welch algorithm.</span>
+<span class="sd">        </span>
+<span class="sd">        :param list seqs: Required: A list of mutated sequences.</span>
+<span class="sd">          </span>
+<span class="sd">        :param list param_to_estimate: A list of parameters to estimate. Options are:</span>
+<span class="sd">          delta, tau, epsilon, gamma. The default are [&quot;delta&quot;,&quot;tau&quot;].</span>
+<span class="sd">          </span>
+<span class="sd">        :param str method: The estimating method to use. Options are: MLE and MAP.</span>
+<span class="sd">          The default is MLE.</span>
+<span class="sd">        </span>
+<span class="sd">        :param dictionary lower_bound: The lower bound of parameters. The format is the</span>
+<span class="sd">          same as upper bound. By default, the lower bound is set to 0.20 for all </span>
+<span class="sd">          parameters.</span>
+<span class="sd">        </span>
+<span class="sd">        :param float tol: stop the estimation if the percentage of likelihood increase is less </span>
+<span class="sd">          than the input value of tol.</span>
+<span class="sd">        </span>
+<span class="sd">        :param int MAX_iter: the maximum number of iterations to perform.</span>
+<span class="sd">        </span>
+<span class="sd">        :param boolean echo: Print the likelihood at each iteration.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">param_to_estimate</span> <span class="o">=</span> <span class="n">param_to_estimate</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;Unconstrained_MLE&quot;</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;Constrained_MLE&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">lower_bound</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lower_bound</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;delta&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)]</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                    <span class="s2">&quot;tau&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)],</span>
+                                    <span class="s2">&quot;MM&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.2</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)],</span>
+                                    <span class="s2">&quot;epsilon&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="mf">0.5</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">-</span><span class="mi">1</span><span class="p">)]</span> <span class="o">+</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                                    <span class="s2">&quot;DM&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)],</span>
+                                    <span class="s2">&quot;gamma&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.5</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)],</span>
+                                    <span class="s2">&quot;IM&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.1</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">)]}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">lower_bound</span> <span class="o">=</span> <span class="n">lower_bound</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_check_bound</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Method need to be set to either Unconstrained_MLE or Constrained_MLE.&quot;</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">MAX_iter</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">echo</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Iteration </span><span class="si">%d</span><span class="s2">, model likelihood </span><span class="si">%.2e</span><span class="s2">&quot;</span> <span class="o">%</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span><span class="p">))</span>
+
+            <span class="n">param_hat</span><span class="p">,</span> <span class="n">likelihood</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">EM</span><span class="p">(</span><span class="n">seqs</span><span class="p">,</span><span class="n">ncores</span><span class="o">=</span><span class="n">ncores</span><span class="p">)</span>
+            
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">likelihood</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span><span class="p">)</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span> <span class="o">&lt;</span> <span class="n">tol</span><span class="p">:</span>
+                <span class="k">break</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">update_parameters</span><span class="p">(</span><span class="n">method</span><span class="p">,</span> <span class="n">param_hat</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span> <span class="o">=</span> <span class="n">likelihood</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Complete at iteration </span><span class="si">%d</span><span class="s2">, model likelihood </span><span class="si">%.2e</span><span class="s2">&quot;</span> <span class="o">%</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">likelihood</span><span class="p">))</span></div>
+    
+
+    
+    
+<div class="viewcode-block" id="hmm_model.forward"><a class="viewcode-back" href="../../crispr_hmm.html#crispr_hmm.hmm_alignment.hmm_model.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute matrices with the forward algorithm.</span>
+<span class="sd">        </span>
+<span class="sd">        :param str t: A mutated sequence.</span>
+<span class="sd">        </span>
+<span class="sd">        :return: Three matrices computed by the forward algorithm: (match, deletion,</span>
+<span class="sd">          insertion).</span>
+<span class="sd">        :rtype: tuple</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+      
+        <span class="n">dim_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span>
+        <span class="n">dim_j</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+
+        <span class="n">AM</span> <span class="o">=</span> <span class="p">[[</span><span class="bp">self</span><span class="o">.</span><span class="n">_init_AM</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="n">AD</span> <span class="o">=</span> <span class="p">[[</span><span class="bp">self</span><span class="o">.</span><span class="n">_init_AD</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="n">AI</span> <span class="o">=</span> <span class="p">[[</span><span class="bp">self</span><span class="o">.</span><span class="n">_init_AI</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim_i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+                <span class="n">M_candidates</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="n">AM</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>  \
+                                    <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span> <span class="o">*</span> <span class="n">AD</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> \
+                                    <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="n">AI</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+                <span class="n">D_candidates</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">AM</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">],</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">AD</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">],</span>  \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">AI</span><span class="p">[</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">]]</span>
+                <span class="n">I_candidates</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">AM</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">rho</span> <span class="o">*</span> <span class="n">AD</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span>      \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="n">AI</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span>
+                <span class="n">AM</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="nb">sum</span><span class="p">(</span><span class="n">M_candidates</span><span class="p">)</span>
+                <span class="n">AD</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="nb">sum</span><span class="p">(</span><span class="n">D_candidates</span><span class="p">)</span>
+                <span class="n">AI</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="nb">sum</span><span class="p">(</span><span class="n">I_candidates</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">AM</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">AD</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">AI</span><span class="p">)</span></div>
+
+
+
+
+<div class="viewcode-block" id="hmm_model.backward"><a class="viewcode-back" href="../../crispr_hmm.html#crispr_hmm.hmm_alignment.hmm_model.backward">[docs]</a>    <span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute matrices with the backward algorithm.</span>
+<span class="sd">        </span>
+<span class="sd">        :param str t: A mutated sequence.</span>
+<span class="sd">        </span>
+<span class="sd">        :return: Three matrices computed by the backward algorithm: (match, deletion,</span>
+<span class="sd">          insertion).</span>
+<span class="sd">        :rtype: tuple</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+      
+      
+        <span class="n">dim_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">dim_j</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="n">BM</span> <span class="o">=</span> <span class="p">[[</span><span class="bp">self</span><span class="o">.</span><span class="n">_init_B</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="s2">&quot;M&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="n">BD</span> <span class="o">=</span> <span class="p">[[</span><span class="bp">self</span><span class="o">.</span><span class="n">_init_B</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+        <span class="n">BI</span> <span class="o">=</span> <span class="p">[[</span><span class="bp">self</span><span class="o">.</span><span class="n">_init_B</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_j</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+
+        <span class="k">for</span> <span class="n">ii</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim_i</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">jj</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">dim_j</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                <span class="n">i</span> <span class="o">=</span> <span class="n">dim_i</span> <span class="o">-</span> <span class="n">ii</span>
+                <span class="n">j</span> <span class="o">=</span> <span class="n">dim_j</span> <span class="o">-</span> <span class="n">jj</span>
+
+                <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">dim_i</span><span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">==</span> <span class="n">dim_j</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                    <span class="k">continue</span>        
+                <span class="n">M_candidates</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="o">*</span> <span class="n">BM</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">BD</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">],</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">BI</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span>
+                <span class="n">D_candidates</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="o">*</span> <span class="n">BM</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">BD</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">],</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">rho</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">BI</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span>
+                <span class="n">I_candidates</span> <span class="o">=</span> <span class="p">[(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span> <span class="o">*</span> <span class="n">BM</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">],</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">BD</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">],</span> \
+                                <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">BI</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">]]</span>
+
+                <span class="n">BM</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">M_candidates</span><span class="p">)</span> 
+                <span class="n">BD</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">D_candidates</span><span class="p">)</span>
+                <span class="n">BI</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">I_candidates</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">BM</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">BD</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">BI</span><span class="p">)[:</span><span class="o">-</span><span class="mi">1</span><span class="p">,:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
+
+
+
+
+<div class="viewcode-block" id="hmm_model.calc_psi"><a class="viewcode-back" href="../../crispr_hmm.html#crispr_hmm.hmm_alignment.hmm_model.calc_psi">[docs]</a>    <span class="k">def</span> <span class="nf">calc_psi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">state</span><span class="p">,</span><span class="n">AM</span><span class="p">,</span><span class="n">AD</span><span class="p">,</span><span class="n">AI</span><span class="p">,</span><span class="n">BM</span><span class="p">,</span><span class="n">BD</span><span class="p">,</span><span class="n">BI</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate psi using the forward-backward matrices.</span>
+<span class="sd">        </span>
+<span class="sd">        :param str state: To compute the psi of which state. Options are:</span>
+<span class="sd">          M (for match), D (for deletion), I (for insertion).</span>
+<span class="sd">        </span>
+<span class="sd">        :return: A matrix of psi.</span>
+<span class="sd">        :rtype: numpy array</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="k">if</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;M&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">AM</span> <span class="o">*</span> <span class="n">BM</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;D&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">AD</span> <span class="o">*</span> <span class="n">BD</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;I&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">AI</span> <span class="o">*</span> <span class="n">BI</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span></div>
+    
+    
+    
+    
+<div class="viewcode-block" id="hmm_model.calc_xi"><a class="viewcode-back" href="../../crispr_hmm.html#crispr_hmm.hmm_alignment.hmm_model.calc_xi">[docs]</a>    <span class="k">def</span> <span class="nf">calc_xi</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">,</span><span class="n">state1</span><span class="p">,</span><span class="n">state2</span><span class="p">,</span><span class="n">AM</span><span class="p">,</span><span class="n">AD</span><span class="p">,</span><span class="n">AI</span><span class="p">,</span><span class="n">BM</span><span class="p">,</span><span class="n">BD</span><span class="p">,</span><span class="n">BI</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate xi (the marginal transition probability from state1 -&gt; state2) using the </span>
+<span class="sd">        forward-backward matrices.</span>
+<span class="sd">        </span>
+<span class="sd">        :param str state1: The first state. Options are:</span>
+<span class="sd">          M (for match), D (for deletion), I (for insertion).</span>
+<span class="sd">          </span>
+<span class="sd">        :param str state2: The second state. Options are:</span>
+<span class="sd">          M (for match), D (for deletion), I (for insertion).</span>
+<span class="sd">        </span>
+<span class="sd">        :return: A matrix of psi.</span>
+<span class="sd">        :rtype: numpy.ndarray</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+      
+        
+        <span class="n">dim_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span>
+        <span class="n">dim_j</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">xi</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_i</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">xi_tmp</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">dim_j</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">dim_i</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">state1</span> <span class="o">==</span> <span class="s2">&quot;M&quot;</span> <span class="ow">and</span> <span class="n">state2</span> <span class="o">==</span> <span class="s2">&quot;D&quot;</span><span class="p">:</span>
+                        <span class="n">xi_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">AM</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">BD</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">state1</span> <span class="o">==</span> <span class="s2">&quot;D&quot;</span> <span class="ow">and</span> <span class="n">state2</span> <span class="o">==</span> <span class="s2">&quot;D&quot;</span><span class="p">:</span>
+                        <span class="n">xi_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">AD</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">BD</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">state1</span> <span class="o">==</span> <span class="s2">&quot;I&quot;</span> <span class="ow">and</span> <span class="n">state2</span> <span class="o">==</span> <span class="s2">&quot;D&quot;</span><span class="p">:</span>
+                        <span class="n">xi_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">AI</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">BD</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">])</span>    
+                    
+                <span class="k">if</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">dim_j</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">state1</span> <span class="o">==</span> <span class="s2">&quot;M&quot;</span> <span class="ow">and</span> <span class="n">state2</span> <span class="o">==</span> <span class="s2">&quot;I&quot;</span><span class="p">:</span>
+                        <span class="n">xi_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">AM</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">BI</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">state1</span> <span class="o">==</span> <span class="s2">&quot;I&quot;</span> <span class="ow">and</span> <span class="n">state2</span> <span class="o">==</span> <span class="s2">&quot;I&quot;</span><span class="p">:</span>
+                        <span class="n">xi_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">AI</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">BI</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">state1</span> <span class="o">==</span> <span class="s2">&quot;D&quot;</span> <span class="ow">and</span> <span class="n">state2</span> <span class="o">==</span> <span class="s2">&quot;I&quot;</span><span class="p">:</span>
+                        <span class="n">xi_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">AD</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">rho</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">BI</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+                        
+                <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">dim_i</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="n">dim_j</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">state1</span> <span class="o">==</span> <span class="s2">&quot;D&quot;</span> <span class="ow">and</span> <span class="n">state2</span> <span class="o">==</span> <span class="s2">&quot;M&quot;</span><span class="p">:</span>
+                        <span class="n">xi_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">AD</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">rho</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span> <span class="o">*</span> <span class="n">BM</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">state1</span> <span class="o">==</span> <span class="s2">&quot;I&quot;</span> <span class="ow">and</span> <span class="n">state2</span> <span class="o">==</span> <span class="s2">&quot;M&quot;</span><span class="p">:</span>
+                        <span class="n">xi_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">AI</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span> <span class="o">*</span> <span class="n">BM</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="k">if</span> <span class="n">state1</span> <span class="o">==</span> <span class="s2">&quot;M&quot;</span> <span class="ow">and</span> <span class="n">state2</span> <span class="o">==</span> <span class="s2">&quot;M&quot;</span><span class="p">:</span>
+                        <span class="n">xi_tmp</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">AM</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">j</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_match</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="n">i</span><span class="p">,</span><span class="n">j</span><span class="p">)</span> <span class="o">*</span> <span class="n">BM</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="o">+</span><span class="mi">1</span><span class="p">])</span>       
+            <span class="n">xi</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">xi_tmp</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">state1</span> <span class="o">==</span> <span class="s2">&quot;I&quot;</span> <span class="ow">and</span> <span class="n">state2</span> <span class="o">==</span> <span class="s2">&quot;M&quot;</span><span class="p">:</span>
+            <span class="n">xi</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">AI</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">state1</span> <span class="o">==</span> <span class="s2">&quot;M&quot;</span> <span class="ow">and</span> <span class="n">state2</span> <span class="o">==</span> <span class="s2">&quot;M&quot;</span><span class="p">:</span>
+            <span class="n">xi</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">AM</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">])</span>            
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">xi</span><span class="p">)</span></div>
+    
+    
+    
+    
+<div class="viewcode-block" id="hmm_model.EM"><a class="viewcode-back" href="../../crispr_hmm.html#crispr_hmm.hmm_alignment.hmm_model.EM">[docs]</a>    <span class="k">def</span> <span class="nf">EM</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">seqs</span><span class="p">,</span><span class="n">ncores</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Compute the updated parameters with the Baum-Welch&#39;s expectation maximization procedure.</span>
+<span class="sd">        </span>
+<span class="sd">        :param list seqs: Required: A list of mutated sequences.</span>
+<span class="sd">          </span>
+<span class="sd">        :param str method: The estimating method to use. Options are: MLE and MAP.</span>
+<span class="sd">          The default is MLE.</span>
+<span class="sd">        </span>
+<span class="sd">        :return: The updated parameters in a dictionary and the likelihood of the model.</span>
+<span class="sd">          </span>
+<span class="sd">        :rtype: tuple</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+      
+      
+        <span class="n">param_hat</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_to_estimate</span><span class="p">:</span>
+            <span class="n">param_hat</span><span class="p">[</span><span class="n">param</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">))</span>
+        
+        <span class="n">seqs_and_count</span> <span class="o">=</span> <span class="p">[(</span><span class="n">seq</span><span class="p">,</span><span class="n">seqs</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">seq</span><span class="p">))</span> <span class="k">for</span> <span class="n">seq</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">seqs</span><span class="p">)]</span>
+        
+        <span class="k">if</span> <span class="n">ncores</span><span class="o">==</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">list_of_param_hat</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">t</span><span class="p">,</span><span class="n">c</span> <span class="ow">in</span> <span class="n">seqs_and_count</span><span class="p">:</span>
+                <span class="n">list_of_param_hat</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">compute_param_hat</span><span class="p">(</span><span class="n">t</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="n">ncores</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">pool</span> <span class="o">=</span> <span class="n">mp</span><span class="o">.</span><span class="n">Pool</span><span class="p">(</span><span class="n">ncores</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">pool</span><span class="p">:</span>
+                <span class="n">list_of_param_hat</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">compute_param_hat</span><span class="p">,</span> <span class="p">[</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">seqs_and_count</span><span class="p">])</span>
+        
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seqs_and_count</span><span class="p">)):</span>
+            <span class="n">t</span><span class="p">,</span><span class="n">c</span> <span class="o">=</span> <span class="n">seqs_and_count</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="n">param_hat_one_sequence</span> <span class="o">=</span> <span class="n">list_of_param_hat</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">param_hat_one_sequence</span><span class="p">:</span>
+                <span class="n">param_hat</span><span class="p">[</span><span class="n">param</span><span class="p">][:,</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">param_hat_one_sequence</span><span class="p">[</span><span class="n">param</span><span class="p">][</span><span class="s2">&quot;numerator&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">c</span>
+                <span class="n">param_hat</span><span class="p">[</span><span class="n">param</span><span class="p">][:,</span><span class="mi">1</span><span class="p">]</span> <span class="o">+=</span> <span class="n">param_hat_one_sequence</span><span class="p">[</span><span class="n">param</span><span class="p">][</span><span class="s2">&quot;denominator&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">c</span>
+        
+        <span class="k">if</span> <span class="s2">&quot;delta&quot;</span> <span class="ow">in</span> <span class="n">param_hat</span><span class="p">:</span>
+            <span class="n">likelihood</span> <span class="o">=</span> <span class="n">param_hat</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="s2">&quot;tau&quot;</span> <span class="ow">in</span> <span class="n">param_hat</span><span class="p">:</span>
+            <span class="n">likelihood</span> <span class="o">=</span> <span class="n">param_hat</span><span class="p">[</span><span class="s2">&quot;tau&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">likelihood</span> <span class="o">=</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+        
+        <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">param_hat</span><span class="p">:</span>
+            <span class="n">tmp</span> <span class="o">=</span> <span class="n">param_hat</span><span class="p">[</span><span class="n">param</span><span class="p">]</span>
+            <span class="n">param_hat</span><span class="p">[</span><span class="n">param</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">k</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="k">if</span> <span class="n">k</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span> <span class="k">else</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="n">tmp</span><span class="p">]</span>            
+        <span class="k">return</span> <span class="n">param_hat</span><span class="p">,</span> <span class="n">likelihood</span></div>
+
+    
+    
+    
+<div class="viewcode-block" id="hmm_model.compute_param_hat"><a class="viewcode-back" href="../../crispr_hmm.html#crispr_hmm.hmm_alignment.hmm_model.compute_param_hat">[docs]</a>    <span class="k">def</span> <span class="nf">compute_param_hat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">t</span><span class="p">):</span>
+        <span class="n">AM</span><span class="p">,</span><span class="n">AD</span><span class="p">,</span><span class="n">AI</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">BM</span><span class="p">,</span><span class="n">BD</span><span class="p">,</span><span class="n">BI</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">backward</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">param_hat</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">param_to_state</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;delta&quot;</span><span class="p">:[</span><span class="s2">&quot;M&quot;</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">],</span>
+                          <span class="s2">&quot;tau&quot;</span><span class="p">:[</span><span class="s2">&quot;M&quot;</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">],</span>
+                          <span class="s2">&quot;epsilon&quot;</span><span class="p">:[</span><span class="s2">&quot;D&quot;</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">],</span>
+                          <span class="s2">&quot;rho&quot;</span><span class="p">:[</span><span class="s2">&quot;D&quot;</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">],</span>
+                          <span class="s2">&quot;gamma&quot;</span><span class="p">:[</span><span class="s2">&quot;I&quot;</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">],</span>
+                          <span class="s2">&quot;pi&quot;</span><span class="p">:[</span><span class="s2">&quot;I&quot;</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">]}</span>
+        
+        <span class="k">for</span> <span class="n">param_group</span> <span class="ow">in</span> <span class="p">[[</span><span class="s2">&quot;delta&quot;</span><span class="p">,</span><span class="s2">&quot;tau&quot;</span><span class="p">],[</span><span class="s2">&quot;epsilon&quot;</span><span class="p">,</span><span class="s2">&quot;rho&quot;</span><span class="p">],[</span><span class="s2">&quot;gamma&quot;</span><span class="p">,</span><span class="s2">&quot;pi&quot;</span><span class="p">]]:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">param_group</span><span class="p">)</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">param_to_estimate</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">states</span> <span class="o">=</span> <span class="n">param_to_state</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                <span class="n">denominator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_psi</span><span class="p">(</span><span class="n">states</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">AM</span><span class="p">,</span><span class="n">AD</span><span class="p">,</span><span class="n">AI</span><span class="p">,</span><span class="n">BM</span><span class="p">,</span><span class="n">BD</span><span class="p">,</span><span class="n">BI</span><span class="p">)</span>
+                <span class="n">param_hat</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;numerator&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_xi</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="n">states</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>\
+                                       <span class="n">states</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">AM</span><span class="p">,</span><span class="n">AD</span><span class="p">,</span><span class="n">AI</span><span class="p">,</span><span class="n">BM</span><span class="p">,</span><span class="n">BD</span><span class="p">,</span><span class="n">BI</span><span class="p">),</span>
+                                   <span class="s2">&quot;denominator&quot;</span><span class="p">:</span><span class="n">denominator</span><span class="p">}</span>
+                <span class="n">states</span> <span class="o">=</span> <span class="n">param_to_state</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+                <span class="n">param_hat</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;numerator&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_xi</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="n">states</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>\
+                                       <span class="n">states</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">AM</span><span class="p">,</span><span class="n">AD</span><span class="p">,</span><span class="n">AI</span><span class="p">,</span><span class="n">BM</span><span class="p">,</span><span class="n">BD</span><span class="p">,</span><span class="n">BI</span><span class="p">),</span>
+                                   <span class="s2">&quot;denominator&quot;</span><span class="p">:</span><span class="n">denominator</span><span class="p">}</span>
+
+            <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">states</span> <span class="o">=</span> <span class="n">param_to_state</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+                <span class="n">p_diff</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">param_group</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">param_to_estimate</span><span class="p">))[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">numerator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_xi</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="n">states</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">states</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="n">AM</span><span class="p">,</span><span class="n">AD</span><span class="p">,</span><span class="n">AI</span><span class="p">,</span><span class="n">BM</span><span class="p">,</span><span class="n">BD</span><span class="p">,</span><span class="n">BI</span><span class="p">)</span>
+                <span class="n">denominator</span> <span class="o">=</span> <span class="n">numerator</span> <span class="o">+</span> \
+                            <span class="bp">self</span><span class="o">.</span><span class="n">calc_xi</span><span class="p">(</span><span class="n">t</span><span class="p">,</span><span class="n">states</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="s2">&quot;M&quot;</span><span class="p">,</span><span class="n">AM</span><span class="p">,</span><span class="n">AD</span><span class="p">,</span><span class="n">AI</span><span class="p">,</span><span class="n">BM</span><span class="p">,</span><span class="n">BD</span><span class="p">,</span><span class="n">BI</span><span class="p">)</span>
+                <span class="n">param_hat</span><span class="p">[</span><span class="n">p</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;numerator&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>\
+                                        <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p_diff</span><span class="p">)))</span> <span class="o">*</span> <span class="n">numerator</span><span class="p">,</span>
+                                   <span class="s2">&quot;denominator&quot;</span><span class="p">:</span><span class="n">denominator</span><span class="p">}</span>
+        <span class="k">return</span> <span class="n">param_hat</span></div>
+    
+    
+    <span class="k">def</span> <span class="nf">_update_parameters_adaptive_step_size</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">param_hat</span><span class="p">,</span> <span class="n">lb</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s2">&quot;delta&quot;</span> <span class="ow">in</span> <span class="n">param_hat</span> <span class="ow">and</span> <span class="s2">&quot;tau&quot;</span> <span class="ow">in</span> <span class="n">param_hat</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="s2">&quot;MM&quot;</span>
+            <span class="n">last_value</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">param</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">param</span><span class="p">[</span><span class="s2">&quot;tau&quot;</span><span class="p">]</span>
+            <span class="n">last_value_hat</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">param_hat</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">param_hat</span><span class="p">[</span><span class="s2">&quot;tau&quot;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="nb">len</span><span class="p">(</span><span class="n">param_hat</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;epsilon&quot;</span> <span class="ow">in</span> <span class="n">param_hat</span><span class="p">:</span>
+                <span class="n">p</span> <span class="o">=</span> <span class="s2">&quot;DM&quot;</span>
+                <span class="n">last_value</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">rho</span> <span class="o">-</span> <span class="n">param</span><span class="p">[</span><span class="s2">&quot;epsilon&quot;</span><span class="p">]</span>
+                <span class="n">last_value_hat</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">rho</span> <span class="o">-</span> <span class="n">param_hat</span><span class="p">[</span><span class="s2">&quot;epsilon&quot;</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="s2">&quot;gamma&quot;</span> <span class="ow">in</span> <span class="n">param_hat</span><span class="p">:</span>
+                <span class="n">p</span> <span class="o">=</span> <span class="s2">&quot;IM&quot;</span>
+                <span class="n">last_value</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">pi</span> <span class="o">-</span> <span class="n">param</span><span class="p">[</span><span class="s2">&quot;gamma&quot;</span><span class="p">]</span>
+                <span class="n">last_value_hat</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">pi</span> <span class="o">-</span> <span class="n">param_hat</span><span class="p">[</span><span class="s2">&quot;gamma&quot;</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="s2">&quot;delta&quot;</span> <span class="ow">in</span> <span class="n">param_hat</span><span class="p">:</span>
+                <span class="n">p</span> <span class="o">=</span> <span class="s2">&quot;MM&quot;</span>
+                <span class="n">last_value</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">param</span><span class="p">[</span><span class="s2">&quot;tau&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">param</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">]</span>
+                <span class="n">last_value_hat</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">param</span><span class="p">[</span><span class="s2">&quot;tau&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">param_hat</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="s2">&quot;tau&quot;</span> <span class="ow">in</span> <span class="n">param_hat</span><span class="p">:</span>
+                <span class="n">p</span> <span class="o">=</span> <span class="s2">&quot;MM&quot;</span>
+                <span class="n">last_value</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">param</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">param</span><span class="p">[</span><span class="s2">&quot;tau&quot;</span><span class="p">]</span>
+                <span class="n">last_value_hat</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">param</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">param_hat</span><span class="p">[</span><span class="s2">&quot;tau&quot;</span><span class="p">]</span>                         
+        <span class="n">param</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">last_value</span>
+        <span class="n">param_hat</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">last_value_hat</span>
+
+        <span class="n">param</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">last_value</span>
+        <span class="n">vector</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([(</span><span class="n">p</span><span class="p">,</span> <span class="n">param_hat</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">-</span><span class="n">param</span><span class="p">[</span><span class="n">p</span><span class="p">])</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">param_hat</span><span class="p">])</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vector</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">abs</span><span class="p">(</span><span class="n">vector</span><span class="p">[</span><span class="n">v</span><span class="p">]</span><span class="o">-</span><span class="mi">0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">1e-4</span><span class="p">:</span>
+                <span class="n">vector</span><span class="p">[</span><span class="n">v</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+        
+        <span class="n">step_size</span> <span class="o">=</span> <span class="p">[(</span><span class="n">lb</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">-</span><span class="n">param</span><span class="p">[</span><span class="n">p</span><span class="p">])</span><span class="o">/</span><span class="n">vector</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">param</span><span class="p">]</span>
+        <span class="n">step_size</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">step_size</span> <span class="k">if</span> <span class="n">s</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">step_size</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">step_size</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">step_size</span> <span class="o">+</span> <span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="mf">0.999</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">step_size</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">param_hat</span><span class="p">:</span>
+            <span class="n">result</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">param</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">+</span> <span class="n">step_size</span> <span class="o">*</span> <span class="n">vector</span><span class="p">[</span><span class="n">p</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">result</span>         
+        
+    
+<div class="viewcode-block" id="hmm_model.update_parameters"><a class="viewcode-back" href="../../crispr_hmm.html#crispr_hmm.hmm_alignment.hmm_model.update_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">update_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">method</span><span class="p">,</span> <span class="n">param_hat</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;Unconstrained_MLE&quot;</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">param_hat</span><span class="p">:</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">param_hat</span><span class="p">[</span><span class="n">param</span><span class="p">])</span>
+        
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;Constrained_MLE&quot;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">if</span> <span class="s2">&quot;delta&quot;</span> <span class="ow">in</span> <span class="n">param_hat</span> <span class="ow">and</span> <span class="s2">&quot;tau&quot;</span> <span class="ow">in</span> <span class="n">param_hat</span><span class="p">:</span>
+                <span class="n">result</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="n">result</span><span class="p">[</span><span class="s2">&quot;tau&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                    <span class="n">param</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;delta&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="n">i</span><span class="p">],</span>\
+                             <span class="s2">&quot;tau&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="n">i</span><span class="p">]}</span>
+                    <span class="n">p_hat</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;delta&quot;</span><span class="p">:</span><span class="n">param_hat</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">],</span>\
+                             <span class="s2">&quot;tau&quot;</span><span class="p">:</span><span class="n">param_hat</span><span class="p">[</span><span class="s2">&quot;tau&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]}</span>
+                    <span class="n">lb</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;delta&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">],</span>\
+                          <span class="s2">&quot;tau&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">[</span><span class="s2">&quot;tau&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">],</span>
+                          <span class="s2">&quot;MM&quot;</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">[</span><span class="s2">&quot;MM&quot;</span><span class="p">][</span><span class="n">i</span><span class="p">]}</span>
+                    
+                    <span class="n">tmp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_parameters_adaptive_step_size</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">p_hat</span><span class="p">,</span> <span class="n">lb</span><span class="p">)</span>
+                    <span class="n">result</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">])</span>
+                    <span class="n">result</span><span class="p">[</span><span class="s2">&quot;tau&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="s2">&quot;tau&quot;</span><span class="p">])</span>
+                <span class="n">param_hat</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;delta&quot;</span><span class="p">)</span>
+                <span class="n">param_hat</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;tau&quot;</span><span class="p">)</span>
+                    
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">param_hat</span><span class="p">:</span>
+                <span class="n">result</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">if</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;delta&quot;</span><span class="p">,</span><span class="s2">&quot;tau&quot;</span><span class="p">]:</span>
+                    <span class="n">p2</span> <span class="o">=</span> <span class="s2">&quot;MM&quot;</span>
+                <span class="k">elif</span> <span class="n">p</span> <span class="o">==</span> <span class="s2">&quot;epsilon&quot;</span><span class="p">:</span>
+                    <span class="n">p2</span> <span class="o">=</span> <span class="s2">&quot;DM&quot;</span>
+                <span class="k">elif</span> <span class="n">p</span> <span class="o">==</span> <span class="s2">&quot;gamma&quot;</span><span class="p">:</span>
+                    <span class="n">p2</span> <span class="o">=</span> <span class="s2">&quot;IM&quot;</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="o">+</span><span class="mi">1</span><span class="p">):</span>
+                    <span class="n">param</span> <span class="o">=</span> <span class="p">{</span><span class="n">p</span><span class="p">:</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">p</span><span class="p">)[</span><span class="n">i</span><span class="p">]}</span>
+                    <span class="n">p_hat</span> <span class="o">=</span> <span class="p">{</span><span class="n">p</span><span class="p">:</span><span class="n">param_hat</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="n">i</span><span class="p">]}</span>
+                    <span class="n">lb</span> <span class="o">=</span> <span class="p">{</span><span class="n">p</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="n">i</span><span class="p">],</span>
+                          <span class="n">p2</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">[</span><span class="n">p2</span><span class="p">][</span><span class="n">i</span><span class="p">]}</span>
+                    <span class="n">tmp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_parameters_adaptive_step_size</span><span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="n">p_hat</span><span class="p">,</span> <span class="n">lb</span><span class="p">)</span>
+                    <span class="n">result</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">tmp</span><span class="p">[</span><span class="n">p</span><span class="p">])</span>
+            <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="n">result</span><span class="p">:</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">param</span><span class="p">,</span> <span class="n">result</span><span class="p">[</span><span class="n">param</span><span class="p">])</span></div>
+ 
+    
+    <span class="k">def</span> <span class="nf">_check_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">all_probs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span> <span class="o">+</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">rho</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">match</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="n">p</span><span class="o">&gt;=</span><span class="mi">0</span> <span class="ow">and</span> <span class="n">p</span><span class="o">&lt;=</span><span class="mi">1</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">all_probs</span><span class="p">]):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Probability needs to be in range [0,1].&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Delta needs to be a list of </span><span class="si">%d</span><span class="s2"> values. The last value needs to be a placeholder 0.&quot;</span>\
+                             <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+            
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Tau needs to be a list of </span><span class="si">%d</span><span class="s2"> values.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+            
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Epsilon needs to be a list of </span><span class="si">%d</span><span class="s2"> values. The first and the last values need to be a placeholder 0.&quot;</span>\
+                            <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+            
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">)</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Gamma needs to be a list of </span><span class="si">%d</span><span class="s2"> values.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+    
+    
+    <span class="k">def</span> <span class="nf">_check_bound</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">param</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">param_to_estimate</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">[</span><span class="n">param</span><span class="p">])</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2"> needs to be a list of </span><span class="si">%d</span><span class="s2"> values.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">param</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="n">i</span><span class="o">&gt;=</span><span class="mi">1</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower_bound</span><span class="p">[</span><span class="n">param</span><span class="p">]]):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;the values in the lower bound for </span><span class="si">%s</span><span class="s2"> need to less than 1.&quot;</span> <span class="o">%</span><span class="n">param</span><span class="p">)</span>
+    
+    
+    <span class="k">def</span> <span class="nf">_log</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">log</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    
+    
+    <span class="k">def</span> <span class="nf">_match</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">use_log</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="o">&gt;=</span><span class="mi">0</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">j</span><span class="o">&gt;=</span><span class="mi">0</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">reference_sequence</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="n">t</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">use_log</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">match</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">match</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">use_log</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mismatch</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">mismatch</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    
+    
+    <span class="k">def</span> <span class="nf">_init_bound</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="p">):</span>
+        <span class="k">return</span> <span class="n">lower_bound</span><span class="p">,</span> <span class="n">upper_bound</span>
+    
+    
+    <span class="k">def</span> <span class="nf">_init_M</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+        <span class="k">return</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+    
+    
+    <span class="k">def</span> <span class="nf">_init_D</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span> <span class="o">+</span> <span class="nb">sum</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">i</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+    
+    
+    <span class="k">def</span> <span class="nf">_init_I</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="o">-</span><span class="nb">float</span><span class="p">(</span><span class="s2">&quot;inf&quot;</span><span class="p">)</span>
+    
+    
+    <span class="k">def</span> <span class="nf">_init_AM</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="mi">0</span>
+
+
+    <span class="k">def</span> <span class="nf">_init_AD</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">delta</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">prod</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">epsilon</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">i</span><span class="p">)])</span>
+        <span class="k">return</span> <span class="mi">0</span>
+
+
+    <span class="k">def</span> <span class="nf">_init_AI</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">**</span> <span class="p">(</span><span class="n">j</span><span class="o">-</span><span class="mi">1</span><span class="p">))</span>
+        <span class="k">return</span> <span class="mi">0</span>
+
+
+    <span class="k">def</span> <span class="nf">_init_B</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>
+        <span class="n">dim_i</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="n">dim_j</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">dim_i</span><span class="o">-</span><span class="mi">1</span> <span class="ow">and</span> <span class="n">j</span> <span class="o">==</span> <span class="n">dim_j</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;M&quot;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau</span><span class="p">[</span><span class="n">dim_i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="k">elif</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;D&quot;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">state</span> <span class="o">==</span> <span class="s2">&quot;I&quot;</span><span class="p">:</span>
+                <span class="k">return</span> <span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">gamma</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mi">0</span>
+    
+    
+    <span class="k">def</span> <span class="nf">_init_R</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="s2">&quot;0&quot;</span><span class="p">,</span><span class="s2">&quot;0&quot;</span><span class="p">,</span><span class="s2">&quot;0&quot;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">i</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="s2">&quot;0&quot;</span><span class="p">,</span><span class="s2">&quot;D&quot;</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">j</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="s2">&quot;0&quot;</span><span class="p">,</span><span class="s2">&quot;0&quot;</span><span class="p">,</span><span class="s2">&quot;I&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[</span><span class="s2">&quot;0&quot;</span><span class="p">,</span><span class="s2">&quot;0&quot;</span><span class="p">,</span><span class="s2">&quot;0&quot;</span><span class="p">]</span></div>
+        
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Jingyuan Hu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

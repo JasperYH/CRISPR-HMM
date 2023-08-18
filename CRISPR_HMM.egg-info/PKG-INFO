@@ -1,0 +1,12 @@
+Metadata-Version: 2.1
+Name: CRISPR-HMM
+Version: 0.0.3
+Summary: Sequence alignment of CRISPR mutation data with hidden Markov model.
+Home-page: #
+Author: Jingyuan Hu
+Author-email: Jingyuan Hu <jingyuan@ds.dfci.harvard.edu>
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Description-Content-Type: text/markdown
+License-File: LICENSE

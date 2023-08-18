@@ -1,0 +1,22 @@
+[project]
+name = "CRISPR_HMM"
+version = "0.0.3"
+authors = [
+  { name="Jingyuan Hu", email="jingyuan@ds.dfci.harvard.edu" },
+]
+description = "Sequence alignment of CRISPR mutation data with hidden Markov model."
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+[build-system]
+requires = [
+    "setuptools",
+    "wheel",
+    "Cython",
+    "numpy",
+    "pathos"
+]
+build-backend = "setuptools.build_meta"
