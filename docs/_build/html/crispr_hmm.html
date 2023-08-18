@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.18.1: http://docutils.sourceforge.net/" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>crispr_hmm package &mdash; CRISPR-HMM 0.0.3 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="crispr_hmm" href="modules.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            CRISPR-HMM
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">crispr_hmm</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">crispr_hmm package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-crispr_hmm.hmm_alignment">crispr_hmm.hmm_alignment module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#crispr_hmm.hmm_alignment.hmm_model"><code class="docutils literal notranslate"><span class="pre">hmm_model</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#crispr-hmm-test-module">crispr_hmm.test module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-crispr_hmm.util">crispr_hmm.util module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#crispr_hmm.util.best_aln_by_iteration"><code class="docutils literal notranslate"><span class="pre">best_aln_by_iteration()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#crispr_hmm.util.calculate_psi_by_iteration"><code class="docutils literal notranslate"><span class="pre">calculate_psi_by_iteration()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#crispr_hmm.util.find_all_alignment_of_state"><code class="docutils literal notranslate"><span class="pre">find_all_alignment_of_state()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#crispr_hmm.util.get_all_alignment"><code class="docutils literal notranslate"><span class="pre">get_all_alignment()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#crispr_hmm.util.get_xi_by_iteration"><code class="docutils literal notranslate"><span class="pre">get_xi_by_iteration()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#crispr_hmm.util.linear_prior"><code class="docutils literal notranslate"><span class="pre">linear_prior()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#crispr_hmm.util.plot_params"><code class="docutils literal notranslate"><span class="pre">plot_params()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-crispr_hmm">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">CRISPR-HMM</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">crispr_hmm</a></li>
+      <li class="breadcrumb-item active">crispr_hmm package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/crispr_hmm.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="crispr-hmm-package">
+<h1>crispr_hmm package<a class="headerlink" href="#crispr-hmm-package" title="Permalink to this heading"></a></h1>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this heading"></a></h2>
+</section>
+<section id="module-crispr_hmm.hmm_alignment">
+<span id="crispr-hmm-hmm-alignment-module"></span><h2>crispr_hmm.hmm_alignment module<a class="headerlink" href="#module-crispr_hmm.hmm_alignment" title="Permalink to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="crispr_hmm.hmm_alignment.hmm_model">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">crispr_hmm.hmm_alignment.</span></span><span class="sig-name descname"><span class="pre">hmm_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">reference_sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">delta</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tau</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epsilon</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gamma</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rho</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.03</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pi</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.03</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">q</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">p</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.9</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/hmm_alignment.html#hmm_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.hmm_alignment.hmm_model" title="Permalink to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>The class to perform sequence alignment with hidden Markov model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>reference_sequence</strong> (<em>str</em>) – a reference sequence.</p></li>
+<li><p><strong>delta</strong> (<em>float</em><em>, </em><em>list</em>) – the transition probability from match state to deletion state.</p></li>
+<li><p><strong>tau</strong> (<em>float</em><em>, </em><em>list</em>) – the transition probability from match state to insertion state.</p></li>
+<li><p><strong>epsilon</strong> (<em>float</em><em>, </em><em>list</em>) – the transition probability from deletion state to deletion state.</p></li>
+<li><p><strong>gamma</strong> (<em>float</em>) – the transition probability from insertion state to insertion state.</p></li>
+<li><p><strong>rho</strong> (<em>float</em>) – the transition probability from deletion state to insertion state.</p></li>
+<li><p><strong>pi</strong> (<em>float</em>) – the transition probability from insertion state to deletion state.</p></li>
+<li><p><strong>p</strong> (<em>float</em>) – the emission probability of match. The emission probability of
+mismatch is 1-p.</p></li>
+<li><p><strong>q</strong> (<em>float</em>) – the emission probability of insertion and deletion. q should be smaller than p</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="crispr_hmm.hmm_alignment.hmm_model.Baum_Welch_estimator">
+<span class="sig-name descname"><span class="pre">Baum_Welch_estimator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seqs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Constrained_MLE'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_to_estimate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['delta',</span> <span class="pre">'tau',</span> <span class="pre">'epsilon',</span> <span class="pre">'gamma']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lower_bound</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncores</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tol</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MAX_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">echo</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/hmm_alignment.html#hmm_model.Baum_Welch_estimator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.hmm_alignment.hmm_model.Baum_Welch_estimator" title="Permalink to this definition"></a></dt>
+<dd><p>Estimate parameters with the Baum-Welch algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seqs</strong> (<em>list</em>) – Required: A list of mutated sequences.</p></li>
+<li><p><strong>param_to_estimate</strong> (<em>list</em>) – A list of parameters to estimate. Options are:
+delta, tau, epsilon, gamma. The default are [“delta”,”tau”].</p></li>
+<li><p><strong>method</strong> (<em>str</em>) – The estimating method to use. Options are: MLE and MAP.
+The default is MLE.</p></li>
+<li><p><strong>lower_bound</strong> (<em>dictionary</em>) – The lower bound of parameters. The format is the
+same as upper bound. By default, the lower bound is set to 0.20 for all
+parameters.</p></li>
+<li><p><strong>tol</strong> (<em>float</em>) – stop the estimation if the percentage of likelihood increase is less
+than the input value of tol.</p></li>
+<li><p><strong>MAX_iter</strong> (<em>int</em>) – the maximum number of iterations to perform.</p></li>
+<li><p><strong>echo</strong> (<em>boolean</em>) – Print the likelihood at each iteration.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="crispr_hmm.hmm_alignment.hmm_model.EM">
+<span class="sig-name descname"><span class="pre">EM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seqs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ncores</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/hmm_alignment.html#hmm_model.EM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.hmm_alignment.hmm_model.EM" title="Permalink to this definition"></a></dt>
+<dd><p>Compute the updated parameters with the Baum-Welch’s expectation maximization procedure.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seqs</strong> (<em>list</em>) – Required: A list of mutated sequences.</p></li>
+<li><p><strong>method</strong> (<em>str</em>) – The estimating method to use. Options are: MLE and MAP.
+The default is MLE.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The updated parameters in a dictionary and the likelihood of the model.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="crispr_hmm.hmm_alignment.hmm_model.backtrace">
+<span class="sig-name descname"><span class="pre">backtrace</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">M</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">D</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">I</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">R</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/hmm_alignment.html#hmm_model.backtrace"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.hmm_alignment.hmm_model.backtrace" title="Permalink to this definition"></a></dt>
+<dd><p>Get the best alignment by backtrace through the matrices computed by the
+function viterbi_matrices(t).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>t</strong> (<em>str</em>) – A mutated sequence.</p></li>
+<li><p><strong>M</strong> – the match matrix computed by viterbi_matrices.</p></li>
+<li><p><strong>D</strong> – the deletion matrix computed by viterbi_matrices.</p></li>
+<li><p><strong>I</strong> – the insertion matrix computed by viterbi_matrices.</p></li>
+<li><p><strong>R</strong> – the back trace matrix computed by viterbi_matrices.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The alignment outcome: (reference sequence, mutated sequence,</p>
+</dd>
+</dl>
+<p>alignment log(probability).)
+:rtype: tuple</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="crispr_hmm.hmm_alignment.hmm_model.backward">
+<span class="sig-name descname"><span class="pre">backward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/hmm_alignment.html#hmm_model.backward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.hmm_alignment.hmm_model.backward" title="Permalink to this definition"></a></dt>
+<dd><p>Compute matrices with the backward algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>t</strong> (<em>str</em>) – A mutated sequence.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Three matrices computed by the backward algorithm: (match, deletion,
+insertion).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="crispr_hmm.hmm_alignment.hmm_model.calc_psi">
+<span class="sig-name descname"><span class="pre">calc_psi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">AM</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">AD</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">AI</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">BM</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">BD</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">BI</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/hmm_alignment.html#hmm_model.calc_psi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.hmm_alignment.hmm_model.calc_psi" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate psi using the forward-backward matrices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>state</strong> (<em>str</em>) – To compute the psi of which state. Options are:
+M (for match), D (for deletion), I (for insertion).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A matrix of psi.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy array</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="crispr_hmm.hmm_alignment.hmm_model.calc_xi">
+<span class="sig-name descname"><span class="pre">calc_xi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">AM</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">AD</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">AI</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">BM</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">BD</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">BI</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/hmm_alignment.html#hmm_model.calc_xi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.hmm_alignment.hmm_model.calc_xi" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate xi (the marginal transition probability from state1 -&gt; state2) using the
+forward-backward matrices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state1</strong> (<em>str</em>) – The first state. Options are:
+M (for match), D (for deletion), I (for insertion).</p></li>
+<li><p><strong>state2</strong> (<em>str</em>) – The second state. Options are:
+M (for match), D (for deletion), I (for insertion).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A matrix of psi.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="crispr_hmm.hmm_alignment.hmm_model.calculate_alignment_probability">
+<span class="sig-name descname"><span class="pre">calculate_alignment_probability</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">aligned_ref</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">aligned_seq</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_log</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/hmm_alignment.html#hmm_model.calculate_alignment_probability"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.hmm_alignment.hmm_model.calculate_alignment_probability" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the probabity of a alignment.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>aligned_ref</strong> (<em>str</em>) – The reference sequence after alignment. e.g. A-T</p></li>
+<li><p><strong>aligned_seq</strong> (<em>str</em>) – A mutated sequence after alignment. e.g. AC-</p></li>
+<li><p><strong>use_log</strong> (<em>boolean</em>) – return log of probability.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return float<span class="colon">:</span></dt>
+<dd class="field-even"><p>The probability of the alignment.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="crispr_hmm.hmm_alignment.hmm_model.compute_param_hat">
+<span class="sig-name descname"><span class="pre">compute_param_hat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/hmm_alignment.html#hmm_model.compute_param_hat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.hmm_alignment.hmm_model.compute_param_hat" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="crispr_hmm.hmm_alignment.hmm_model.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/hmm_alignment.html#hmm_model.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.hmm_alignment.hmm_model.forward" title="Permalink to this definition"></a></dt>
+<dd><p>Compute matrices with the forward algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>t</strong> (<em>str</em>) – A mutated sequence.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Three matrices computed by the forward algorithm: (match, deletion,
+insertion).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="crispr_hmm.hmm_alignment.hmm_model.update_parameters">
+<span class="sig-name descname"><span class="pre">update_parameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">param_hat</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/hmm_alignment.html#hmm_model.update_parameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.hmm_alignment.hmm_model.update_parameters" title="Permalink to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="crispr_hmm.hmm_alignment.hmm_model.viterbi">
+<span class="sig-name descname"><span class="pre">viterbi</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/hmm_alignment.html#hmm_model.viterbi"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.hmm_alignment.hmm_model.viterbi" title="Permalink to this definition"></a></dt>
+<dd><p>Perform the Viterbi algorithm to generate the best alignment between the
+reference sequence and a mutated sequence t.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>t</strong> (<em>str</em>) – A mutated sequence.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The alignment outcome: (reference sequence, mutated sequence,</p>
+</dd>
+</dl>
+<p>alignment log(probability).)
+:rtype: tuple</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="crispr_hmm.hmm_alignment.hmm_model.viterbi_matrices">
+<span class="sig-name descname"><span class="pre">viterbi_matrices</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/hmm_alignment.html#hmm_model.viterbi_matrices"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.hmm_alignment.hmm_model.viterbi_matrices" title="Permalink to this definition"></a></dt>
+<dd><p>Compute the matrices with the Viterbi’s dynamic programming algorithm.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>t</strong> (<em>str</em>) – A mutated sequence.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Four matrices computed by the Viterbi algorithm: (match, deletion,
+insertion, back trace matrix).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="crispr-hmm-test-module">
+<h2>crispr_hmm.test module<a class="headerlink" href="#crispr-hmm-test-module" title="Permalink to this heading"></a></h2>
+</section>
+<section id="module-crispr_hmm.util">
+<span id="crispr-hmm-util-module"></span><h2>crispr_hmm.util module<a class="headerlink" href="#module-crispr_hmm.util" title="Permalink to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="crispr_hmm.util.best_aln_by_iteration">
+<span class="sig-prename descclassname"><span class="pre">crispr_hmm.util.</span></span><span class="sig-name descname"><span class="pre">best_aln_by_iteration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/util.html#best_aln_by_iteration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.util.best_aln_by_iteration" title="Permalink to this definition"></a></dt>
+<dd><p>Iteratively generate all alignment outcome between sequence s and t.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>object</em>) – A hmm_model object.</p></li>
+<li><p><strong>t</strong> (<em>str</em>) – A mutated sequence.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The best alignment between the model.reference_sequence and t.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="crispr_hmm.util.calculate_psi_by_iteration">
+<span class="sig-prename descclassname"><span class="pre">crispr_hmm.util.</span></span><span class="sig-name descname"><span class="pre">calculate_psi_by_iteration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/util.html#calculate_psi_by_iteration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.util.calculate_psi_by_iteration" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the psi (marginal probability) of a particular
+state by summing over the the possible alignment through iteration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>object</em>) – A hmm_model object.</p></li>
+<li><p><strong>t</strong> (<em>str</em>) – The second sequence.</p></li>
+<li><p><strong>state</strong> (<em>str</em>) – The hidden state of psi. Possibilities are: M, I and D.</p></li>
+<li><p><strong>pos</strong> (<em>int</em>) – The position of hidden state.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The marginal probability of psi(state, pos).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="crispr_hmm.util.find_all_alignment_of_state">
+<span class="sig-prename descclassname"><span class="pre">crispr_hmm.util.</span></span><span class="sig-name descname"><span class="pre">find_all_alignment_of_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">aln_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/util.html#find_all_alignment_of_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.util.find_all_alignment_of_state" title="Permalink to this definition"></a></dt>
+<dd><p>Find all alignment between sequence s and t containing the
+hidden state specified by state and position pos.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>aln_list</strong> (<em>list</em>) – <p>.</p>
+</p></li>
+<li><p><strong>t</strong> (<em>str</em>) – The second sequence.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of all alignment outcome.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="crispr_hmm.util.get_all_alignment">
+<span class="sig-prename descclassname"><span class="pre">crispr_hmm.util.</span></span><span class="sig-name descname"><span class="pre">get_all_alignment</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">s</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/util.html#get_all_alignment"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.util.get_all_alignment" title="Permalink to this definition"></a></dt>
+<dd><p>Iteratively generate all alignment outcome between sequence s and t.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>s</strong> (<em>str</em>) – The first sequence.</p></li>
+<li><p><strong>t</strong> (<em>str</em>) – The second sequence.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list of all alignment outcome.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="crispr_hmm.util.get_xi_by_iteration">
+<span class="sig-prename descclassname"><span class="pre">crispr_hmm.util.</span></span><span class="sig-name descname"><span class="pre">get_xi_by_iteration</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">t</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pos2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/util.html#get_xi_by_iteration"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.util.get_xi_by_iteration" title="Permalink to this definition"></a></dt>
+<dd><p>Calculate the xi (marginal probability) of a particular state transition
+(state1,pos1) -&gt; (state2,pos2) by summing over the the possible alignment
+through iteration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>object</em>) – A hmm_model object.</p></li>
+<li><p><strong>t</strong> (<em>str</em>) – The second sequence.</p></li>
+<li><p><strong>state1</strong> (<em>str</em>) – The first hidden state. Possibilities are: M, I and D.</p></li>
+<li><p><strong>pos1</strong> (<em>int</em>) – The position of the first hidden state.</p></li>
+<li><p><strong>state2</strong> (<em>str</em>) – The second hidden state. Possibilities are: M, I and D.</p></li>
+<li><p><strong>pos2</strong> (<em>int</em>) – The position of the second hidden state.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The marginal transition probability from (state1, pos1) to</p>
+</dd>
+</dl>
+<p>(state2, pos2).
+:rtype: float</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="crispr_hmm.util.linear_prior">
+<span class="sig-prename descclassname"><span class="pre">crispr_hmm.util.</span></span><span class="sig-name descname"><span class="pre">linear_prior</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">parameter</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MAX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MIN</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">MAX_POS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">length</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/util.html#linear_prior"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.util.linear_prior" title="Permalink to this definition"></a></dt>
+<dd><p>Generate linear prior for a transition probability of the following parameters:
+delta, tau, gamma, pi. Persumbly, the transition probability is highest at the
+CRISPR induced DSB site and decreases as it moves further.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>parameter</strong> (<em>str</em>) – Which of the following parameter: delta, tau, gamma, pi.</p></li>
+<li><p><strong>MAX</strong> (<em>float</em>) – The maximum probability.</p></li>
+<li><p><strong>MIN</strong> (<em>float</em>) – The minimum probability.</p></li>
+<li><p><strong>MAX_POS</strong> (<em>int</em>) – The position of reference sequence where the transition</p></li>
+</ul>
+</dd>
+</dl>
+<p>probability is the highest. e.g. 4bp upstream to the PAM.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>length</strong> (<em>int</em>) – The length of the reference sequence.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A list transition probability from the first position to the last position.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list[float]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="crispr_hmm.util.plot_params">
+<span class="sig-prename descclassname"><span class="pre">crispr_hmm.util.</span></span><span class="sig-name descname"><span class="pre">plot_params</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['delta',</span> <span class="pre">'tau',</span> <span class="pre">'epsilon',</span> <span class="pre">'gamma']</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">colors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">['gray',</span> <span class="pre">'gray',</span> <span class="pre">'gray',</span> <span class="pre">'gray']</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/crispr_hmm/util.html#plot_params"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#crispr_hmm.util.plot_params" title="Permalink to this definition"></a></dt>
+<dd><p>Plot the transition probability of a model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>model</strong> (<em>object</em>) – A hmm_model object.</p></li>
+<li><p><strong>t</strong> (<em>str</em>) – The second sequence.</p></li>
+<li><p><strong>params</strong> (<em>list</em>) – A list of parameters to plot. Default: [“delta”,”tau”,”epsilon”,”gamma”].</p></li>
+<li><p><strong>colors</strong> (<em>list</em>) – A list of colors to use. Default: [“gray”,”gray”,”gray”,”gray”].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Figures of transition probability.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>figure</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-crispr_hmm">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-crispr_hmm" title="Permalink to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="modules.html" class="btn btn-neutral float-left" title="crispr_hmm" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, Jingyuan Hu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
