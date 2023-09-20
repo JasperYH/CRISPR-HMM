@@ -1,8 +1,8 @@
 Metadata-Version: 2.1
 Name: CRISPR-HMM
-Version: 0.0.3
+Version: 1.0.0
 Summary: Sequence alignment of CRISPR mutation data with hidden Markov model.
-Home-page: #
+Home-page: https://github.com/JasperYH/CRISPR-HMM
 Author: Jingyuan Hu
 Author-email: Jingyuan Hu <jingyuan@ds.dfci.harvard.edu>
 Classifier: Programming Language :: Python :: 3
@@ -10,3 +10,9 @@ Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
 Description-Content-Type: text/markdown
 License-File: LICENSE
+Requires-Dist: numpy
+Requires-Dist: cython
+Requires-Dist: pathos
+
+# CRISPR-HMM
+Probabilistic alignment of CRISPR sequence data with hidden Markov model

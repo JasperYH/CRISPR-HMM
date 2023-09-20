@@ -1,6 +1,6 @@
 [project]
 name = "CRISPR_HMM"
-version = "0.0.3"
+version = "1.0.0"
 authors = [
   { name="Jingyuan Hu", email="jingyuan@ds.dfci.harvard.edu" },
 ]

@@ -389,7 +389,12 @@ class hmm_model(object):
         the forward and backward matrices for the specified state and then 
         summing across columns.
         """
-    
+        if state == "M":
+            return np.sum(AM * BM, axis=1)
+        if state == "D":
+            return np.sum(AD * BD, axis=1)
+        if state == "I":
+            return np.sum(AI * BI, axis=1)
     
     
     

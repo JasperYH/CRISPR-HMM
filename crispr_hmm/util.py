@@ -123,7 +123,7 @@ def best_aln_by_iteration(model,t):
   
     best_score = -float("inf")
     for aln in get_all_alignment(model.reference_sequence,t):
-        score = model.get_likelihood(aln[0],aln[1],use_log=True)
+        score = model.calculate_alignment_probability(aln[0],aln[1],use_log=True)
         if score > best_score:
             best_score = score
             best_aln = aln
@@ -194,16 +194,16 @@ def calculate_psi_by_iteration(model,t,state,pos):
     """
     
     aln_list = get_all_alignment(model.reference_sequence,t)
-    my_alignment,_ = get_all_alignment_of_state(aln_list,state,pos)
+    my_alignment,_ = find_all_alignment_of_state(aln_list,state,pos)
     
     if state == "S":
         prob = 0
         for aln in aln_list:
-            prob += model.get_likelihood(aln[0],aln[1])
+            prob += model.calculate_alignment_probability(aln[0],aln[1],fix_trivial_param=False)
     elif state == "M" or state == "D":
         prob = 0
         for aln in my_alignment:
-            prob += model.get_likelihood(aln[0],aln[1])
+            prob += model.calculate_alignment_probability(aln[0],aln[1],fix_trivial_param=False)
     elif state == "I":
         prob = 0
         for aln in my_alignment:
@@ -214,13 +214,13 @@ def calculate_psi_by_iteration(model,t,state,pos):
                     j += 1
                 if j == pos and aln[0][i] == "-":
                     k += 1
-            prob += k * model.get_likelihood(aln[0],aln[1])
+            prob += k * model.calculate_alignment_probability(aln[0],aln[1],fix_trivial_param=False)
     return prob
 
 
 
 
-def get_xi_by_iteration(model,t,state1,pos1,state2,pos2):
+def calculate_xi_by_iteration(model,t,state1,pos1,state2,pos2):
     """
     Calculate the xi (marginal probability) of a particular state transition
     (state1,pos1) -> (state2,pos2) by summing over the the possible alignment 
@@ -256,34 +256,34 @@ def get_xi_by_iteration(model,t,state1,pos1,state2,pos2):
         else:
             my_alignment2 = []
         for aln in my_alignment2:
-            prob += model.get_likelihood(aln[0],aln[1],use_end_prob=True)
+            prob += model.calculate_alignment_probability(aln[0],aln[1],use_end_prob=True)
     elif state1 == "I":
-        my_alignment1, idx1 = get_all_alignment_of_state(aln_list,state1,pos1)
-        my_alignment2, idx2 = get_all_alignment_of_state(my_alignment1,state2,pos2)
+        my_alignment1, idx1 = find_all_alignment_of_state(aln_list,state1,pos1)
+        my_alignment2, idx2 = find_all_alignment_of_state(my_alignment1,state2,pos2)
         result = []
         for i in range(len(my_alignment2)):
             aln = my_alignment2[i]
             if state2 == "I" and pos1 == pos2:
                 j = idx2[i] + 1
                 while j < len(aln[0]) and aln[0][j] == "-":
-                    prob += model.get_likelihood(aln[0],aln[1],use_end_prob=True)
+                    prob += model.calculate_alignment_probability(aln[0],aln[1],use_end_prob=True)
                     j += 1
             elif state2 == "M" or state2 == "D" or state2 == "E":
                 prob += model.get_likelihood(aln[0],aln[1],use_end_prob=True)  
     else:
-        my_alignment1, idx1 = get_all_alignment_of_state(aln_list,state1,pos1)
-        my_alignment2, idx2 = get_all_alignment_of_state(my_alignment1,state2,pos2)
+        my_alignment1, idx1 = find_all_alignment_of_state(aln_list,state1,pos1)
+        my_alignment2, idx2 = find_all_alignment_of_state(my_alignment1,state2,pos2)
         for i in range(len(my_alignment2)):
             aln = my_alignment2[i]
             j = my_alignment1.index(aln)
             if idx1[j] + 1 == idx2[i]:
-                prob += model.get_likelihood(aln[0],aln[1],use_end_prob=True)              
+                prob += model.calculate_alignment_probability(aln[0],aln[1],use_end_prob=True)              
     return prob
 
 
 
 
-def plot_params(model,params=["delta","tau","epsilon","gamma"],colors=["gray","gray","gray","gray"]):
+def plot_params(model,params=["delta","tau"],colors=["gray","gray","gray","gray"]):
     """
     Plot the transition probability of a model.
     
@@ -300,15 +300,14 @@ def plot_params(model,params=["delta","tau","epsilon","gamma"],colors=["gray","g
     """
     
     fig, axs = plt.subplots(len(params), 1)
-    for i in range(4):
+    for i in range(len(params)):
         param = params[i]
         pos = [j for j in range(model.n+1)]
         axs[i].bar(pos, getattr(model,param),color=colors[i])
-        if i == 3:
+        if i == len(params)-1:
             bar = ["0"] + [j for j in model.reference_sequence]
             axs[i].set_xticks(pos, bar)
         else:
             axs[i].set_xticks([])
         axs[i].set_ylabel("%s"%param,fontsize=10)
     return fig
-
