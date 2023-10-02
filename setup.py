@@ -4,7 +4,7 @@ import numpy
 
 setuptools.setup(
     name='CRISPR_HMM',
-    version='1.0.0',
+    version='1.0.1',
     description='Sequence alignment of CRISPR mutation data with hidden Markov model.',
     url='https://github.com/JasperYH/CRISPR-HMM',
     author='Jingyuan Hu',
