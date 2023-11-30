@@ -82,7 +82,7 @@ cpdef tuple fast_viterbi(str t, str ref,
     R[0, 1, 2] = -1
     R[1, 0, 2] = -1
     scores = [M[n, m] + MM[n],
-              D[n, m],
+              D[n, m] + DM[n],
               I[n, m] + IM[n]]
     best_score = max(scores)
     state = scores.index(best_score)

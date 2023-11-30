@@ -195,6 +195,7 @@ class hmm_model(object):
         log_epsilon = np.log(np.array(self.epsilon)+1e-60)
         log_rho = np.log(self.rho)
         log_DM = np.log(1-self.rho-np.array(self.epsilon))
+        log_DM[-1] = 0.0
         log_gamma = np.log(np.array(self.gamma)+1e-60)
         log_pi = np.log(self.pi)
         log_IM = np.log(1-self.pi-np.array(self.gamma))
